@@ -108,7 +108,7 @@ This section captures the *why* behind technical decisions.
 **Hard:**
 - Budget: $0/month for infrastructure (free tiers only until launch)
 - Team: one product designer (Justin) + AI assistant (Claude)
-- Timeline: usable MVP within ~3 months (target: June 2026 for a real yard sale)
+- Timeline: usable MVP within ~3 weeks (target: June 2026 for a real yard sale)
 - Platform: mobile web, must work on iOS Safari and Android Chrome
 
 **Soft:**
