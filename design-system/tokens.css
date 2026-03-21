@@ -8,11 +8,20 @@
   /* Colors - Dark theme (default) */
   --color-background: #0d1117;
   --color-surface: #161b22;
+  --color-surface-raised: #1c2129;
   --color-text-primary: #e6edf3;
   --color-text-secondary: #8b949e;
+  --color-text-inverse: #0d1117;
   --color-accent: #58a6ff;
   --color-accent-hover: #79c0ff;
   --color-border: #30363d;
+  --color-border-focus: #58a6ff;
+  --color-success: #3fb950;
+  --color-success-subtle: rgba(63, 185, 80, 0.15);
+  --color-error: #f85149;
+  --color-error-subtle: rgba(248, 81, 73, 0.15);
+  --color-warning: #d29922;
+  --color-warning-subtle: rgba(210, 153, 34, 0.15);
 
   /* Spacing scale */
   --space-xs: 4px;
@@ -40,15 +49,33 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Touch targets (WCAG 2.2 AA: 44px minimum) */
+  --touch-min: 44px;
+  --input-height: 48px;
+  --button-height: 48px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
 }
 
 /* Light theme override */
 [data-theme="light"] {
   --color-background: #ffffff;
   --color-surface: #f6f8fa;
+  --color-surface-raised: #ffffff;
   --color-text-primary: #1f2328;
   --color-text-secondary: #656d76;
+  --color-text-inverse: #ffffff;
   --color-accent: #0969da;
   --color-accent-hover: #0550ae;
   --color-border: #d0d7de;
+  --color-border-focus: #0969da;
+  --color-success: #1a7f37;
+  --color-success-subtle: rgba(26, 127, 55, 0.1);
+  --color-error: #cf222e;
+  --color-error-subtle: rgba(207, 34, 46, 0.1);
+  --color-warning: #9a6700;
+  --color-warning-subtle: rgba(154, 103, 0, 0.1);
 }

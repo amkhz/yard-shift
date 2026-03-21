@@ -1,6 +1,6 @@
 # Architecture
 
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-21
 
 ---
 
@@ -123,7 +123,7 @@ Follow this order every time:
 | **State** | Context + useReducer | No dependency. Scales until it does not, then upgrade deliberately |
 | **Styling** | CSS variables (tokens.css) | No build step. Theme switching via data attribute. Framework-agnostic |
 | **Testing** | Vitest | Vite-native. Same config, same transforms. Zero friction |
-| **Backend** | None (add when needed) | Scaffold ships frontend-only. Add `/api` when the project requires it |
+| **Backend** | Supabase (Postgres, Auth, Realtime) | One SDK for database, auth, storage, and real-time. RLS scopes data per sale. |
 
 ---
 
@@ -140,12 +140,21 @@ Follow this order every time:
 │   ├── App.jsx            # Root component
 │   ├── App.css            # Global styles (uses design tokens)
 │   └── /components        # UI components (one per file)
+│       ├── AuthForm.jsx   # Sign up / sign in
+│       ├── SalesList.jsx  # Sales list + create sale form
+│       ├── SaleDetail.jsx # Sale view with stats + items + real-time
+│       ├── ItemList.jsx   # Item cards with sell/undo/delete
+│       ├── AddItemForm.jsx# Add item with category picker
+│       └── ErrorBoundary.jsx
 ├── /core                  # Pure logic layer
 │   ├── store.jsx          # State management (Context + useReducer)
 │   ├── utils.js           # Utility functions (no side effects)
 │   └── utils.test.js      # Tests (vitest)
 ├── /services              # External integration layer
-│   └── api.js             # Fetch wrapper (get, post, put, del)
+│   ├── supabase.js        # Supabase client init
+│   ├── auth.js            # Auth (signUp, signIn, signOut, session)
+│   ├── sales.js           # Sales CRUD + stats queries
+│   └── items.js           # Items CRUD, mark sold, real-time subscription
 ├── /design-system         # Visual foundation layer
 │   └── tokens.css         # CSS variables (colors, spacing, typography, themes)
 └── /vector                # Zero Vector knowledge artifacts
@@ -183,9 +192,10 @@ Follow this order every time:
 - Theme switching: `data-theme` attribute on `document.documentElement`
 
 ### API Pattern
-- All API calls go through `services/api.js`
-- Environment variables in `.env` (never committed)
-- Backend URL via `VITE_API_URL` (defaults to `/api`)
+- All data access goes through service files in `services/`
+- `services/supabase.js` exports the shared client instance
+- `services/auth.js`, `services/sales.js`, `services/items.js` handle domain operations
+- Environment variables in `.env` (never committed): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
 ### Testing
 - Tests live next to the code: `core/utils.test.js`
@@ -213,5 +223,6 @@ Architecture Decision Records live in `/vector/decisions/`.
 | ADR | Decision | Date | Status |
 |-----|----------|------|--------|
 | 000 | [Template] | — | Template |
+| 001 | Supabase data model (5 tables, RLS, triggers) | 2026-03-13 | Accepted |
 
 When you make a significant technical choice, document it as an ADR.
