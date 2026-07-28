@@ -11,6 +11,8 @@ export async function fetchSales() {
 
 export async function createSale({ title, description, saleDate, startTime, endTime, address }) {
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Create the sale
   const { data, error } = await supabase
     .from('sales')
     .insert({
@@ -25,6 +27,18 @@ export async function createSale({ title, description, saleDate, startTime, endT
     .select()
     .single();
   if (error) throw error;
+
+  // Add the host as an accepted member (no trigger, no SECURITY DEFINER)
+  const { error: memberError } = await supabase
+    .from('sale_members')
+    .insert({
+      sale_id: data.id,
+      user_id: user.id,
+      role: 'host',
+      invite_status: 'accepted',
+    });
+  if (memberError) throw memberError;
+
   return data;
 }
 

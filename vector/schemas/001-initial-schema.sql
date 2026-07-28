@@ -156,25 +156,9 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- ----------------------------------------------------------------------------
--- 6. AUTO-CREATE HOST MEMBERSHIP ON SALE CREATION
--- ----------------------------------------------------------------------------
-
--- When a sale is created, automatically add the host as an accepted member.
-CREATE OR REPLACE FUNCTION handle_new_sale()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.sale_members (sale_id, user_id, role, invite_status)
-  VALUES (NEW.id, NEW.host_id, 'host', 'accepted');
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_sale_created
-  AFTER INSERT ON sales
-  FOR EACH ROW EXECUTE FUNCTION handle_new_sale();
-
--- ----------------------------------------------------------------------------
--- 7. ROW LEVEL SECURITY
+-- 6. ROW LEVEL SECURITY
+-- No SECURITY DEFINER triggers. Host membership is created client-side
+-- in services/sales.js after the sale insert.
 -- ----------------------------------------------------------------------------
 
 -- Enable RLS on all tables.
@@ -186,14 +170,12 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 -- ---- PROFILES ----
 
--- Users can read any profile (needed for "Sold by" display names).
-CREATE POLICY "Profiles are viewable by authenticated users"
+CREATE POLICY "profiles_select"
   ON profiles FOR SELECT
   TO authenticated
   USING (true);
 
--- Users can update only their own profile.
-CREATE POLICY "Users can update their own profile"
+CREATE POLICY "profiles_update"
   ON profiles FOR UPDATE
   TO authenticated
   USING (id = auth.uid())
@@ -201,98 +183,83 @@ CREATE POLICY "Users can update their own profile"
 
 -- ---- CATEGORIES ----
 
--- Categories are readable by everyone (even anon, for future public use).
-CREATE POLICY "Categories are viewable by everyone"
+CREATE POLICY "categories_select"
   ON categories FOR SELECT
   USING (true);
 
--- Only service_role can modify categories (managed via SQL editor or admin).
--- No INSERT/UPDATE/DELETE policies for authenticated users.
-
 -- ---- SALES ----
 
--- Members can view sales they belong to.
-CREATE POLICY "Sale members can view their sales"
-  ON sales FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM sale_members
-      WHERE sale_members.sale_id = sales.id
-        AND sale_members.user_id = auth.uid()
-    )
-  );
-
--- Any authenticated user can create a sale (they become the host).
-CREATE POLICY "Authenticated users can create sales"
+CREATE POLICY "sales_insert"
   ON sales FOR INSERT
   TO authenticated
   WITH CHECK (host_id = auth.uid());
 
--- Only the host can update a sale.
-CREATE POLICY "Hosts can update their sales"
+-- Host can always see their sales; members see via sale_members.
+-- No recursion: sale_members SELECT uses user_id = auth.uid() directly.
+CREATE POLICY "sales_select"
+  ON sales FOR SELECT
+  TO authenticated
+  USING (
+    host_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM sale_members
+      WHERE sale_members.sale_id = id
+        AND sale_members.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "sales_update"
   ON sales FOR UPDATE
   TO authenticated
   USING (host_id = auth.uid())
   WITH CHECK (host_id = auth.uid());
 
--- Only the host can delete a sale.
-CREATE POLICY "Hosts can delete their sales"
+CREATE POLICY "sales_delete"
   ON sales FOR DELETE
   TO authenticated
   USING (host_id = auth.uid());
 
 -- ---- SALE MEMBERS ----
+-- SELECT: direct user_id check (no self-reference).
+-- INSERT/DELETE: checked via sales.host_id (no self-reference).
 
--- Members can view other members of their sales.
-CREATE POLICY "Sale members can view membership"
+CREATE POLICY "sale_members_select"
   ON sale_members FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM sale_members AS sm
-      WHERE sm.sale_id = sale_members.sale_id
-        AND sm.user_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
--- Hosts can invite new members (insert).
-CREATE POLICY "Hosts can invite members"
+CREATE POLICY "sale_members_insert"
   ON sale_members FOR INSERT
   TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM sale_members AS sm
-      WHERE sm.sale_id = sale_members.sale_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'host'
+      SELECT 1 FROM sales
+      WHERE sales.id = sale_id
+        AND sales.host_id = auth.uid()
     )
   );
 
--- Members can update their own membership (e.g., accept invite).
-CREATE POLICY "Members can update their own membership"
+CREATE POLICY "sale_members_update"
   ON sale_members FOR UPDATE
   TO authenticated
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
--- Hosts can remove members.
-CREATE POLICY "Hosts can remove members"
+CREATE POLICY "sale_members_delete"
   ON sale_members FOR DELETE
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM sale_members AS sm
-      WHERE sm.sale_id = sale_members.sale_id
-        AND sm.user_id = auth.uid()
-        AND sm.role = 'host'
+      SELECT 1 FROM sales
+      WHERE sales.id = sale_id
+        AND sales.host_id = auth.uid()
     )
   );
 
 -- ---- ITEMS ----
+-- All access scoped through sale_members (which uses direct user_id check).
 
--- Sale members can view items in their sales.
-CREATE POLICY "Sale members can view items"
+CREATE POLICY "items_select"
   ON items FOR SELECT
   TO authenticated
   USING (
@@ -303,8 +270,7 @@ CREATE POLICY "Sale members can view items"
     )
   );
 
--- Sale members can add items to their sales.
-CREATE POLICY "Sale members can add items"
+CREATE POLICY "items_insert"
   ON items FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -315,8 +281,7 @@ CREATE POLICY "Sale members can add items"
     )
   );
 
--- Sale members can update items in their sales (mark sold, edit price, etc.).
-CREATE POLICY "Sale members can update items"
+CREATE POLICY "items_update"
   ON items FOR UPDATE
   TO authenticated
   USING (
@@ -327,8 +292,7 @@ CREATE POLICY "Sale members can update items"
     )
   );
 
--- Only hosts can delete items.
-CREATE POLICY "Hosts can delete items"
+CREATE POLICY "items_delete"
   ON items FOR DELETE
   TO authenticated
   USING (

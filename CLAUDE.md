@@ -1,5 +1,12 @@
 # Yard Shift — The Crew
 
+> **PARKED AS ARCHIVE (2026-07-27).** This repo is a point-in-time
+> reference, not an active project. Its crew (Workbench / Lookout /
+> Signpost) retired with it. The future is a complete Fable rebuild with
+> the universal crew (replicant kit), preceded by a full product
+> interrogation of how this app should behave. Until that mission, nothing
+> here gets built on.
+
 **Project spirit:** Porchlight — a passionate, playful partner that helps people and families create and run yard sales. Warm like a porch light left on for the neighbors.
 
 ---
